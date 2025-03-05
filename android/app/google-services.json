@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "57193616084",
+    "project_id": "veresiyeapp-8edc6",
+    "storage_bucket": "veresiyeapp-8edc6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:57193616084:android:a2c005d3b2575152ff6141",
+        "android_client_info": {
+          "package_name": "com.example.veresiye_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDDqOe7YuP8XWKfMkVJvS1FzfJIt3Xz96g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
