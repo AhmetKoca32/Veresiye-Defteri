@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:veresiye_app/service/firestore_service.dart';
 
 class AddPersonPage extends StatefulWidget {
   final Function(Map<String, dynamic>) onAddPerson;
@@ -17,24 +18,49 @@ class _AddPersonPageState extends State<AddPersonPage> {
   final TextEditingController amountController = TextEditingController();
 
   String selectedAmountType = 'Alınacak'; // 'Alınacak' veya 'Verilecek'
+  final FirestoreService _firestoreService = FirestoreService();
 
-  void addPerson() {
-    if (firstNameController.text.isNotEmpty &&
-        lastNameController.text.isNotEmpty &&
-        phoneController.text.isNotEmpty &&
-        descriptionController.text.isNotEmpty &&
-        amountController.text.isNotEmpty) {
+  Future<void> addPerson() async {
+    String firstName = firstNameController.text.trim();
+    String lastName = lastNameController.text.trim();
+    String phone = phoneController.text.trim();
+    String description = descriptionController.text.trim();
+    String amountText = amountController.text.trim();
+
+    if (firstName.isNotEmpty &&
+        lastName.isNotEmpty &&
+        phone.isNotEmpty &&
+        description.isNotEmpty &&
+        amountText.isNotEmpty) {
+      // Aynı isim ve soyisimdeki kişiyi kontrol et
+      var existingPerson =
+          await _firestoreService.people
+              .where('firstName', isEqualTo: firstName)
+              .where('lastName', isEqualTo: lastName)
+              .get();
+
+      if (existingPerson.docs.isNotEmpty) {
+        // Eğer aynı isim ve soyisimde kişi varsa uyarı ver
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Bu kişi zaten mevcut!')));
+        return;
+      }
+
+      // Kişiyi Firestore'a ekle
       Map<String, dynamic> newPerson = {
-        'firstName': firstNameController.text,
-        'lastName': lastNameController.text,
-        'phone': phoneController.text,
-        'description': descriptionController.text,
-        'amount': double.tryParse(amountController.text) ?? 0,
+        'firstName': firstName,
+        'lastName': lastName,
+        'phone': phone,
+        'description': description,
+        'amount': double.tryParse(amountText) ?? 0,
         'amountType': selectedAmountType,
       };
+
+      await _firestoreService.addPerson(newPerson);
       widget.onAddPerson(newPerson);
 
-      // Sayfayı kapatıp ana sayfaya dön
+      // Sayfayı kapatıp ana ekrana dön
       Navigator.pop(context);
     } else {
       // Eğer gerekli alanlar boşsa kullanıcıyı uyar
@@ -49,13 +75,12 @@ class _AddPersonPageState extends State<AddPersonPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Yeni Kişi Ekle'),
-        backgroundColor: const Color(0xFF222831),
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Yeni kişi ekleme formu
             TextField(
               controller: firstNameController,
               decoration: const InputDecoration(

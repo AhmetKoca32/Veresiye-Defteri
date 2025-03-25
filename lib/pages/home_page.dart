@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:veresiye_app/service/firestore_service.dart';
 
-import 'add_person_page.dart';
 import 'edit_person_page.dart';
+import 'hesap_gecmisi.dart'; // Hesap Geçmişi sayfasını import ettik.
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -112,6 +112,51 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void markAsPaid(String documentId, Map<String, dynamic> person) async {
+    try {
+      // Ödeme türünü kontrol et
+      String paymentStatus = '';
+      Color statusColor = Colors.black;
+
+      if (person['amountType'] == 'Verilecek') {
+        paymentStatus = 'Borç ödendi';
+        statusColor =
+            Colors.red[500]!; // Burada belirli bir renk tonu seçiyoruz
+      } else if (person['amountType'] == 'Alınacak') {
+        paymentStatus = 'Borç alındı';
+        statusColor =
+            Colors.blue[500]!; // Burada da belirli bir renk tonu seçiyoruz
+      }
+
+      // Ödeme durumu bilgisini geçiş sayfasına gönder
+      await firestoreService.addToHistory({
+        ...person,
+        'paymentStatus': paymentStatus,
+        'statusColor':
+            statusColor.value, // Renk değeri olarak .value kullanıyoruz
+      });
+
+      // Sonra mevcut koleksiyondan sil
+      await firestoreService.deletePerson(documentId);
+
+      setState(() {
+        filteredPeopleList.removeWhere((p) => p['id'] == documentId);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(paymentStatus),
+          backgroundColor: Color(statusColor.value), // Color kullanımı
+        ),
+      );
+    } catch (e) {
+      print('Hata: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bir hata oluştu, tekrar deneyin!')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -124,6 +169,19 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         backgroundColor: const Color(0xFF222831),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => HistoryPage(), // Geçmiş sayfası
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -156,7 +214,7 @@ class _HomePageState extends State<HomePage> {
             ElevatedButton(onPressed: filterList, child: const Text('Ara')),
             const SizedBox(height: 20),
             Expanded(
-              child: StreamBuilder<List<Map<String, dynamic>>>(
+              child: StreamBuilder<List<Map<String, dynamic>>>( 
                 stream: firestoreService.getPeople(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -213,12 +271,12 @@ class _HomePageState extends State<HomePage> {
                                         fontSize: 18,
                                       ),
                                     ),
-                                    // Açıklamayı butona tıklayınca gösterecek buton
+                                    const SizedBox(height: 10),
                                     ElevatedButton(
                                       onPressed: () {
                                         showDescriptionDialog(
                                           person['description'] ??
-                                              'Açıklama yok',
+                                              'Açıklama bulunmuyor.',
                                         );
                                       },
                                       child: const Text('Açıklamayı Göster'),
@@ -264,11 +322,16 @@ class _HomePageState extends State<HomePage> {
                                                 ),
                                           ),
                                         );
+                                      } else if (value == 'Ödendi') {
+                                        markAsPaid(
+                                          personId,
+                                          person,
+                                        ); // Ödendi olarak işaretleme
                                       }
                                     }
                                   },
                                   itemBuilder: (BuildContext context) {
-                                    return ['Sil', 'Düzenle'].map((
+                                    return ['Sil', 'Düzenle', 'Ödendi'].map((
                                       String choice,
                                     ) {
                                       return PopupMenuItem<String>(
@@ -284,24 +347,14 @@ class _HomePageState extends State<HomePage> {
                         );
                       },
                     );
+                  } else {
+                    return const Center(child: Text('No data available'));
                   }
-                  return const Center(child: Text('No data available'));
                 },
               ),
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AddPersonPage(onAddPerson: addPerson),
-            ),
-          );
-        },
-        child: const Icon(Icons.add),
       ),
     );
   }
